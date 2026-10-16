@@ -1,6 +1,8 @@
-from datetime import datetime
+import re
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$")
 
 
 class EmpresaInfo(BaseModel):
@@ -8,13 +10,47 @@ class EmpresaInfo(BaseModel):
     contacto: str = Field(..., min_length=5, max_length=100, description="Correo o contacto de la empresa")
 
 
-class PostulanteResponse(BaseModel):
-    id: Optional[str] = Field(default=None, description="Identificador único del postulante")
-    nombre: str = Field(..., min_length=2, max_length=100, description="Nombre completo del postulante")
-    correo: str = Field(..., min_length=5, max_length=100, description="Correo electrónico del postulante")
-    fecha_postulacion: Optional[datetime] = Field(default=None, description="Fecha y hora de postulación")
+class ApplicantCreate(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=100, description="Nombre completo del postulante")
+    email: str = Field(..., min_length=5, max_length=100, description="Correo electrónico del postulante")
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "nombre": "Juan Pérez",
+                "email": "juan.perez@example.com"
+            }
+        }
+    )
+
+    @field_validator("nombre")
+    @classmethod
+    def validate_nombre(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("El nombre no puede estar vacío ni contener solo espacios")
+        return cleaned
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("El correo electrónico no puede estar vacío")
+        if not EMAIL_REGEX.match(cleaned):
+            raise ValueError("Formato de correo electrónico inválido")
+        return cleaned
+
+
+class ApplicantResponse(BaseModel):
+    nombre: str = Field(..., description="Nombre completo del postulante")
+    email: str = Field(..., description="Correo electrónico del postulante")
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+PostulanteResponse = ApplicantResponse
 
 
 class JobBase(BaseModel):
