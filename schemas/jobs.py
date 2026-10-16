@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EmpresaInfo(BaseModel):
@@ -55,6 +55,41 @@ class JobCreate(JobBase):
             }
         }
     )
+
+
+class JobUpdate(BaseModel):
+    titulo: Optional[str] = Field(default=None, min_length=3, max_length=150, description="Título del puesto laboral")
+    descripcion: Optional[str] = Field(default=None, min_length=10, max_length=5000, description="Descripción del puesto")
+    empresa: Optional[str] = Field(default=None, min_length=2, max_length=100, description="Nombre de la empresa")
+    ubicacion: Optional[str] = Field(default=None, min_length=2, max_length=100, description="Ubicación o ciudad")
+    modalidad: Optional[str] = Field(default=None, min_length=3, max_length=50, description="Modalidad de trabajo")
+    salario: Optional[float] = Field(default=None, ge=0, description="Salario ofrecido (no negativo)")
+    tipo_contrato: Optional[str] = Field(default=None, min_length=3, max_length=50, description="Tipo de contrato")
+    estado: Optional[str] = Field(default=None, description="Estado de la oferta")
+    requisitos: Optional[List[str]] = Field(default=None, description="Lista de requisitos")
+    empresa_info: Optional[EmpresaInfo] = Field(default=None, description="Información de contacto de la empresa")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "salario": 5200.0,
+                "modalidad": "Híbrido",
+                "estado": "Cerrada"
+            }
+        }
+    )
+
+    @model_validator(mode="after")
+    def validate_has_editable_fields(self):
+        fields = [
+            self.titulo, self.descripcion, self.empresa, self.ubicacion,
+            self.modalidad, self.salario, self.tipo_contrato, self.estado,
+            self.requisitos, self.empresa_info
+        ]
+        if not any(val is not None for val in fields):
+            raise ValueError("Debe proporcionar al menos un campo editable para actualizar la oferta laboral.")
+        return self
 
 
 class JobResponse(JobBase):
