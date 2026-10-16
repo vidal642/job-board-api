@@ -10,8 +10,8 @@ def validate_object_id(id_str: str) -> ObjectId:
         return ObjectId(id_str)
     except (InvalidId, TypeError, ValueError):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid job ID format: '{id_str}'"
+            status_code=422,
+            detail=f"Formato de identificador inválido: '{id_str}'"
         )
 
 
